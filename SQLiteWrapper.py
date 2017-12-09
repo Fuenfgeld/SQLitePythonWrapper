@@ -6,26 +6,12 @@ import re
 
 class dbVersandhaus:
 
-    def __init__(self):
-        self.conn = sqlite3.connect(":memory:")
-        
+    def __init__(self,inFileName, inDbName):
+        self.conn = sqlite3.connect(":memory:")        
         self.c = self.conn.cursor()
-        self.c.execute('''
-        CREATE TABLE versandhaus
-                     (Kunde text,
-                     Textilien text, 
-                     Geschenkartikel text,
-                     Durchschnittspreis text, 
-                     Klasse text)''')
-        
-        self.conn.commit()
-        
-        with open('Versandhaus.csv', 'r') as csvfile:
-            reader = csv.reader(csvfile, delimiter=';')
-            for rowCSV in reader:
-                self.c.execute('''INSERT INTO versandhaus VALUES (?,?,?,?,?)''', rowCSV)
-                
-        self.conn.commit()
+        self.fileName = inFileName
+        self.dbName = inDbName
+        self.loadCSV()
 
     def SQL(self,inString):
         try:
@@ -54,7 +40,38 @@ class dbVersandhaus:
         
         #conn.close()
 
+    def loadCSV(self):
+        with open(self.fileName, 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            header = next(reader)
+            self.createDBShema(header)
+            for row in reader:
+                self.addNewEntryToDB(row)
+                
+    def createDBShema(self, header):        
+        createStatement = "CREATE TABLE "
+        createStatement += self.dbName + " ("
+
+        for item in header:
+            createStatement += item + " text," 
+
+        createStatement = createStatement[0:len(createStatement)-1]
+        createStatement += ")"
+        
+        self.c.execute(createStatement)
+        self.conn.commit()
+                     
+
+    def addNewEntryToDB(self, newRow):
+         #self.c.execute('''INSERT INTO versandhaus VALUES (?,?,?,?,?)''', rowCSV)
+        insertStatement = "INSERT INTO " + self.dbName + " VALUES (" + (len(newRow)*"?,") 
+        insertStatement = insertStatement[0:len(insertStatement)-1] + ")"
+         
+        self.c.execute(insertStatement, newRow)
+        self.conn.commit()
+
 if __name__ == '__main__':
-    db = dbVersandhaus()
+    db = dbVersandhaus("weather.nominal.csv", "weather")
     #db.SQL('SELECT * FROM versandhaus')
-    print(db.isSELECT('select'))
+    #print(db.isSELECT('select'))
+    print(db.SQL('SELECT * FROM weather'))
